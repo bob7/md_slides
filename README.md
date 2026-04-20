@@ -4,9 +4,8 @@ Run the python script on a markdown file produce html slides.
 
 Supports:
 
-- Latex macros
+- Latex macros and multiple slide types (customizable)
 - tags for color, background, fonts, boxes etc. (customizable)
-- multiple slide types (customizable)
 - multiple environments: theorem, lemma, definition, example etc. (customizable)
 - javasript for interactive slides
 - dynamic html imports
