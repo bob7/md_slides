@@ -7,9 +7,8 @@ Supports:
 - Latex macros and multiple slide types (customizable)
 - tags for color, background, fonts, boxes etc. (customizable)
 - multiple environments: theorem, lemma, definition, example etc. (customizable)
-- javasript for interactive slides
-- dynamic html imports
--  export pdf from the browser
+- html imports and javasript for interactive slides
+- export pdf from the browser
   
 ## Command Options
 ```bash
