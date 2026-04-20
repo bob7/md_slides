@@ -1,15 +1,15 @@
 # md_slides Documentation
 
-Run the python script on a markdown file produce html slides.
-
-Supports:
+Run the python script on a markdown file produce html slides. Supports:
 
 - Latex macros and multiple slide types (customizable)
 - tags for color, background, fonts, boxes etc. (customizable)
 - multiple environments: theorem, lemma, definition, example etc. (customizable)
 - html imports and javasript for interactive slides
 - export pdf from the browser
-  
+
+[Demo slides](http://barmpalias.net/slides/_2025/nankai25/nankai25.html)  
+
 ## Command Options
 ```bash
 python make.py file.md -o out.html
