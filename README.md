@@ -1,4 +1,4 @@
-# md_slides Documentation
+# Html Slides from Markdown
 
 Run the python script on a markdown file produce html slides. Supports:
 
