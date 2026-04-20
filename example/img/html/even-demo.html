@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Number Game</title>
+  <style>
+    body {
+		font-family: Arial, sans-serif;
+		font-size: 9pt;
+    }
+	h1 {color: #555;}
+    .game-container {
+		width: 100%;
+		text-align: center;
+		margin-top: 90px;
+		padding-top: 30px;
+		padding-bottom: 40px;
+		max-width: 600px;
+		margin: auto;
+    }
+    .grid-controls {
+      margin-bottom: 10px;
+    }
+    .grid-controls button {
+/*      font-size: 18px;*/
+      padding: 3px 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .number-bar {
+		display: grid;
+		grid-gap: 0px;
+		justify-content: center;
+		margin-bottom: 0px;
+    }
+    .highlight {
+	  background-color: rgb(136, 136, 187, 0.2) !important;
+/*      background-color: #8888bb !important;*/
+/*	  opacity:0.2;*/
+    }
+    .number-block {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		cursor: pointer;
+		font-size: 12px;  /* Smaller font size */
+		color: transparent; /* Hide the number */
+		position: relative;
+		border: 1px solid #AAA;
+		box-sizing: border-box;
+		aspect-ratio: 1 / 1;/* Keep square */
+    }
+	.even {background-color: #FFEFD5;}
+	.odd {background-color: white;}
+		.line-end {border-right: 2px solid black;}
+
+    .player1-picked {
+      background-color: gray;
+	  opacity: 0.7;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+    }
+    .player2-picked {
+      background-color: rgb(20,190, 20);
+      position: absolute;
+	  opacity: 0.6;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+    }
+    .picked-numbers {display:none;}
+
+	input:checked  {
+	  background-color: #2196F3;
+	}
+
+	input:checked :before {
+	  transform: translateX(26px);
+	}
+	.toggle-button {
+	  border: 0.1em #bbb solid; 
+	  font-size:11px; 
+	  margin-left: 10px;
+	  border-radius: 5px;
+	  background-color: #eee;
+	  color: #000;
+	  cursor: pointer;
+	  transition: background-color 0.3s ease;
+	}
+	.toggle-button.active {background-color: rgb(26, 176, 26); color: white; }
+
+	.mode-button {
+	  padding: 6px 12px;
+	  margin-left: 5px;
+	  border: none;
+	  border-radius: 5px;
+	  background-color: #ddd;
+	  color: #000;
+/*	  font-weight: bold;*/
+	  cursor: pointer;
+	  transition: background-color 0.3s ease;
+	}
+	.mode-button.active {
+	  background-color: #2196F3;
+	  color: white;
+	}
+	/* The Modal (background) */
+	.modal {
+	  display: none; /* Hidden by default */
+	  position: fixed;
+	  z-index: 1; /* Sit on top */
+	  left: 0;
+	  top: 0;
+	  width: 100%;
+	  height: 100%;
+	  overflow: auto;
+	  background-color: rgb(0,0,0); /* Fallback color */
+	  background-color: #555; /* Black w/ opacity */
+	  padding-top: 60px;
+	}
+
+	/* Modal Content */
+	.modal-content {
+	  background-color: #fefefe;
+	  margin: 5% auto;
+	  color:#444;
+	  text-align:left;
+	  font-size:11pt;
+	  padding: 20px;
+	  border: 1px solid #888;
+	  width: 80%;
+	  max-width: 600px;
+	  border-radius: 10px;
+	}
+
+	/* The Close Button */
+	.close-btn {
+	  color: #aaa;
+	  float: right;
+	  font-size: 28px;
+	  font-weight: bold;
+	  cursor: pointer;
+	}
+
+	.close-btn:hover,
+	.close-btn:focus {
+	  color: black;
+	  text-decoration: none;
+	  cursor: pointer;
+	}
+
+	/* Modal Text Styling */
+	h2 {
+	  color: #444;
+	  text-align: center;
+	}
+
+	ul {
+	  margin: 10px 0;
+	  padding-left: 20px;
+	}
+
+	ul li {
+	  line-height: 1.6;
+	}
+
+	strong {
+	  color: #444;
+	}
+
+</style>
+</head><body><div class="game-container">
+<!-- <h1>Number Game</h1> -->
+
+<div class="grid-controls">
+
+<button  style="font-size:15px; font-weight:bold; background-color:#999; color:#fff; padding: 2px 8px 2px 8px; border: 0.1em #777 solid; border-radius:5px;" onclick="changeGridSize(-2)">-</button>
+<span id="grid-size-label"></span>
+<button  style="font-size:15px; font-weight:bold; background-color:#999; color:#fff; padding: 2px 8px 2px 8px; border: 0.1em #777 solid; border-radius: 5px;" onclick="changeGridSize(2)">+</button>
+
+<button class="toggle-button" style="font-size:13px; padding-top:5px; padding-bottom:5px;" onclick="showRules()">Rules</button>
+<button class="toggle-button" style="font-size:13px; padding-top:5px; padding-bottom:5px;" onclick="startDemo()">Demo</button>
+<button id="autoPlayer1Btn" class="toggle-button" style="font-size:13px; padding-top:5px; padding-bottom:5px;" onclick="toggleAutoPlayer(1)">P1-auto</button>
+<button id="smartPlayer2Btn" class="toggle-button" style="font-size:13px; padding-top:5px; padding-bottom:5px;" onclick="toggleSmartPlayer2()">P2-auto</button>
+<button id="pauseBtn" class="toggle-button" style="font-size:13px; padding-top:5px; padding-bottom:5px;" onclick="togglePause()">Pause</button>
+
+<!-- <button id="autoPlayer2Btn" class="toggle-button" style="border: 0.1em #bbb solid; font-size:11px; padding-top:5px; padding-bottom:5px;" onclick="toggleAutoPlayer(2)">rand-P2</button> -->
+<!-- <button id="autoPlayer1Btn" class="toggle-button" style="font-size:11px; padding-top:5px; padding-bottom:5px;" onclick="toggleAutoPlayer(1)">auto</button> -->
+<!-- <button id="autoPlayer2Btn" class="toggle-button" style="font-size:11px; padding-top:5px; padding-bottom:5px;" onclick="toggleAutoPlayer(2)">rand-P2</button> -->
+<!-- <button id="highlightToggleBtn" class="toggle-button active" style="border: 0.1em #bbb solid; font-size:11px; padding-top:5px; padding-bottom:5px;" onclick="toggleHighlight()">Highlight</button> -->
+<!-- <button id="smartPlayer2Btn" class="toggle-button" style="font-size:11px; padding-top:5px; padding-bottom:5px;" onclick="toggleSmartPlayer2()">smart-P2</button> -->
+<!-- <button id="pick3Btn" class="mode-button" style="font-size:11px;" onclick="setPickCount(3)">3</button> -->
+<!-- <button id="pick4Btn" class="mode-button active" style="font-size:11px;" onclick="setPickCount(4)">4</button> -->
+
+</div>
+
+<!-- Modal for Rules -->
+<div id="rulesModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeRules()">&times;</span>
+    <h2>Game Rules</h2>
+    <p><strong>Grid and numbers</strong></p>
+    <ul>
+	  <li>Grid-cells are numbered naturally, from top-left to bottom right</li>
+      <li>Shaded cells indicate even numbers</li>
+    </ul>
+
+    <p><strong>Player's moves</strong></p>
+    <ul>
+      <li>Player 1 picks <strong>4</strong> numbers per round</li>
+      <li>Player 2 picks an even number between the <strong>min</strong> and <strong>max</strong> of the above 4 numbers</li>
+      <li>Options for Player 2 are highlighted in blue, after each move of Player 1</li>
+    </ul>
+    <p><strong>Restrictions and Losing condition</strong></p>
+    <ul>
+      <li>Player 1 can pick numbers already chosen by Player 2 but not by themselves</li>
+      <li>Player 2 cannot reuse even numbers that (s)he picked before</li>
+      <li>The game ends when a player, the <strong>loser</strong>, cannot make a valid move.</li>
+    </ul>
+    <p><strong>Options</strong></p>
+    <ul>
+      <li>Press <strong>P1-auto</strong> or <strong>P2-auto</strong> to play against the machine</li>
+      <li>Press <strong>Demo</strong> to see the machine play against itself</li>
+    </ul>
+  </div>
+</div>
+
+
+<div class="number-bar"></div>
+<div class="picked-numbers"><label></label><span id="player1-picks"></span><br><label></label><span id="player2-picks"></span></div>
+<p id="turn-indicator"></p>
+</div>
+<script>
+  let player1Picks = new Set();
+  let player2Picks = new Set();
+  let player1StagePicks = new Set();
+  let player1PickCount = 4;
+  let turn = 1;
+  let smartPlayer2 = false;
+  let autoPlayer1 = false;
+  let autoPlayer2 = false;
+  let startAfterGrid = false;
+  let gridSize = 11;
+  let delayvar = 500;
+  let isPaused = false;
+  let highlightEnabled = true;
+
+  function showRules() {
+    const modal = document.getElementById('rulesModal');
+    modal.style.display = "block";
+  }
+  
+  function closeRules() {
+    const modal = document.getElementById('rulesModal');
+    modal.style.display = "none";
+  }
+ 
+  window.onclick = function(event) {
+    const modal = document.getElementById('rulesModal');
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  }
+
+
+  // function showRules() {
+  //   alert("Rules:\n\n" +
+  //     "1. Player 1 selects 4 numbers per round.\n" +
+  //     "2. Player 2 must pick one even number between the min and max of those numbers.\n" +
+  //     "3. Player 2 cannot reuse even numbers they previously selected.\n" +
+  //     "4. Player 1 can pick numbers already chosen by Player 2, but not by themselves.\n" +
+  //     "5. If a player has no legal move on their turn, they lose.\n" +
+  //     "6. You can enable P1-auto, P2-auto to play against the machine.\n"
+  //   );
+  // }
+
+  function startDemo() {
+    // Enable automation
+    autoPlayer1 = true;
+    smartPlayer2 = true;
+	delayvar = 1200;
+    // Update button states
+    document.getElementById('autoPlayer1Btn')?.classList.add('active');
+    document.getElementById('autoPlayer2Btn')?.classList.remove('active');
+    document.getElementById('smartPlayer2Btn')?.classList.add('active');
+
+    // Generate a fresh grid (this will now trigger Player 1 automatically)
+    generateGrid();
+
+    // Trigger Player 1's move automatically after the grid is generated
+    if (autoPlayer1 && player1StagePicks.size === 0 && !isPaused) {
+      setTimeout(autoPlayPlayer1, delayvar); // Delay to allow the grid to render
+    }
+  }
+
+  function togglePause() {
+    isPaused = !isPaused;
+    const btn = document.getElementById('pauseBtn');
+    btn.classList.toggle('active', isPaused);
+    // btn.textContent = isPaused ? "Resume" : "Pause";
+
+    // If we're resuming and it's an auto turn, trigger it now
+    if (!isPaused) {
+      if (turn === 1 && autoPlayer1 && player1StagePicks.size === 0) {
+        setTimeout(autoPlayPlayer1, delayvar);
+      } else if (turn === 2 && player1StagePicks.size === player1PickCount) {
+        if (smartPlayer2) {
+          setTimeout(autoPlaySmartPlayer2, delayvar);
+        } else if (smartPlayer2) {
+          const validMoves = highlightValidPlayer2Moves();
+          if (validMoves.length > 0) {
+            setTimeout(() => {
+              const choice = validMoves[Math.floor(Math.random() * validMoves.length)];
+              const autoBlock = document.querySelector(`.number-block:nth-child(${choice})`);
+              player2Picks.add(choice);
+              const bottomHalf = document.createElement('div');
+              bottomHalf.classList.add('player2-picked');
+              autoBlock.appendChild(bottomHalf);
+              document.getElementById('player2-picks').textContent = [...player2Picks].join(', ');
+              clearHighlights();
+              player1StagePicks.clear();
+              turn = 1;
+              document.getElementById('turn-indicator').textContent = "";
+              if (autoPlayer1 && !isPaused) {
+                setTimeout(autoPlayPlayer1, delayvar);
+              }
+            }, delayvar);
+          } else {
+            alert("Player 2 has no valid move. Player 2 lost!");
+            turn = 0;
+          }
+        }
+      }
+    }
+  }
+
+
+  function toggleHighlight() {
+    highlightEnabled = !highlightEnabled;
+    const btn = document.getElementById('highlightToggleBtn');
+    btn.classList.toggle('active', highlightEnabled);
+    btn.textContent = highlightEnabled ? "Highlight" : "Highlight";
+  }
+
+  function setPickCount(count) {
+    player1PickCount = count;
+    document.getElementById('pick3Btn').classList.toggle('active', count === 3);
+    document.getElementById('pick4Btn').classList.toggle('active', count === 4);
+  }
+
+
+  function toggleSmartPlayer2() {
+    smartPlayer2 = !smartPlayer2;
+    document.getElementById('smartPlayer2Btn').classList.toggle('active', smartPlayer2);
+
+    // If Smart Player 2 is enabled and it's currently Player 2's turn, make a move now
+    if (smartPlayer2 && turn === 2 && player1StagePicks.size === player1PickCount) {
+      setTimeout(autoPlaySmartPlayer2, delayvar);
+    }
+  }
+
+
+  function toggleAutoPlayer(player) {
+    if (player === 1) {
+      autoPlayer1 = !autoPlayer1;
+      document.getElementById('autoPlayer1Btn').classList.toggle('active', autoPlayer1);
+      if (autoPlayer1 && turn === 1 && player1StagePicks.size === 0) {
+        setTimeout(autoPlayPlayer1, delayvar);
+      }
+    } else if (player === 2) {
+      autoPlayer2 = !autoPlayer2;
+      document.getElementById('autoPlayer2Btn').classList.toggle('active', autoPlayer2);
+    }
+  }
+
+  function changeGridSize(delta) {
+    gridSize = Math.max(3, gridSize + delta);
+    // document.getElementById("grid-size-label").textContent = `${gridSize}`;
+    // document.getElementById("grid-size-label").textContent = ``;
+    generateGrid();
+  }
+
+  function generateGrid() {
+    const numBlocks = gridSize * gridSize;
+    const numberBar = document.querySelector('.number-bar');
+    numberBar.innerHTML = '';
+    document.getElementById('player1-picks').textContent = '';
+    document.getElementById('player2-picks').textContent = '';
+    document.getElementById('turn-indicator').textContent = "";
+    player1Picks.clear();
+    player2Picks.clear();
+    player1StagePicks.clear();
+    turn = 1;
+
+    const screenWidth = window.innerWidth;
+    const gridWidth = screenWidth * 0.6;
+    const blockSize = Math.floor(gridWidth / gridSize);
+
+    numberBar.style.gridTemplateColumns = `repeat(${gridSize}, ${blockSize}px)`;
+    numberBar.style.gridTemplateRows = `repeat(${gridSize}, ${blockSize}px)`;
+
+    for (let i = 1; i <= numBlocks; i++) {
+      const block = document.createElement('div');
+      block.classList.add('number-block');
+      block.textContent = i;
+      block.dataset.number = i;
+
+      if (i % 2 === 0) {
+        block.classList.add('even');
+      } else {
+        block.classList.add('odd');
+      }
+
+      block.addEventListener('click', () => handleBlockClick(i, block));
+      numberBar.appendChild(block);
+    }
+  }
+
+  function scoreEvenBox(number) {
+    if (number % 2 !== 0) {
+      console.warn("Input must be an even number.");
+      return null;
+    }
+
+    const totalBlocks = gridSize * gridSize;
+
+    // Collect all even numbers picked by Player 2
+    const evenPicked = [...player2Picks].filter(n => n % 2 === 0).sort((a, b) => a - b);
+
+    if (evenPicked.length === 0) {
+      // If no even number has been picked by Player 2
+      const totalEvenBoxes = Math.floor(totalBlocks / 2);
+      return totalEvenBoxes;
+    }
+
+    // Calculate distances to all picked even boxes and return the smallest
+    let minDistance = Infinity;
+    for (const picked of evenPicked) {
+      const dist = Math.abs(picked - number);
+      if (dist < minDistance) minDistance = dist;
+    }
+
+    return minDistance;
+  }
+
+
+  function handleBlockClick(number, block) {
+    if (turn === 1) {
+      if (!player1Picks.has(number)) {
+        player1StagePicks.add(number);
+        player1Picks.add(number);
+        const topHalf = document.createElement('div');
+        topHalf.classList.add('player1-picked');
+        block.appendChild(topHalf);
+        document.getElementById('player1-picks').textContent = [...player1Picks].join(', ');
+
+        if (player1StagePicks.size === player1PickCount) {
+          const validMoves = highlightValidPlayer2Moves();
+          if (validMoves.length === 0) {
+            alert("Player 2 lost!");
+            turn = 0;
+            return;
+          }
+
+		  if (smartPlayer2) {
+		    setTimeout(autoPlaySmartPlayer2, delayvar);
+		  } else if (smartPlayer2) {
+		    setTimeout(() => {
+		      const choice = validMoves[Math.floor(Math.random() * validMoves.length)];
+		      const autoBlock = document.querySelector(`.number-block:nth-child(${choice})`);
+		      player2Picks.add(choice);
+		      const bottomHalf = document.createElement('div');
+		      bottomHalf.classList.add('player2-picked');
+		      autoBlock.appendChild(bottomHalf);
+		      document.getElementById('player2-picks').textContent = [...player2Picks].join(', ');
+		      clearHighlights();
+		      player1StagePicks.clear();
+		      turn = 1;
+		      document.getElementById('turn-indicator').textContent = "";
+		      if (autoPlayer1) setTimeout(autoPlayPlayer1, delayvar);
+		    }, delayvar);
+		  } else {
+		    turn = 2;
+		    document.getElementById('turn-indicator').textContent = "";
+		  }
+
+        }
+      }
+    } else if (turn === 2) {
+      if (player1StagePicks.size === player1PickCount) {
+        const min = Math.min(...player1StagePicks);
+        const max = Math.max(...player1StagePicks);
+        if (
+          number % 2 === 0 &&
+          number >= min &&
+          number <= max &&
+          !player2Picks.has(number)
+        ) {
+          player2Picks.add(number);
+          const bottomHalf = document.createElement('div');
+          bottomHalf.classList.add('player2-picked');
+          block.appendChild(bottomHalf);
+          document.getElementById('player2-picks').textContent = [...player2Picks].join(', ');
+
+          clearHighlights();
+          player1StagePicks.clear();
+          turn = 1;
+          document.getElementById('turn-indicator').textContent = "";
+
+          // 🔁 Auto-play Player 1 if enabled
+          if (autoPlayer1) {
+            setTimeout(autoPlayPlayer1, delayvar);
+          }
+        }
+      }
+    }
+  }
+  
+  function autoPlaySmartPlayer2() {
+    const min = Math.min(...player1StagePicks);
+    const max = Math.max(...player1StagePicks);
+
+    const candidates = [];
+    for (let i = min; i <= max; i++) {
+      if (i % 2 === 0 && !player2Picks.has(i)) {
+        candidates.push(i);
+      }
+    }
+
+    // If no valid moves exist, the game ends
+    if (candidates.length === 0) {
+      alert("Player 2 lost!");
+      turn = 0; // End the game
+      return;
+    }
+
+    // Pick the one with the maximum score
+    let best = candidates[0];
+    let bestScore = scoreEvenBox(best);
+    for (let i = 1; i < candidates.length; i++) {
+      const s = scoreEvenBox(candidates[i]);
+      if (s > bestScore) {
+        best = candidates[i];
+        bestScore = s;
+      }
+    }
+
+    // Perform the move
+    const block = document.querySelector(`.number-block:nth-child(${best})`);
+    player2Picks.add(best);
+    const bottomHalf = document.createElement('div');
+    bottomHalf.classList.add('player2-picked');
+    block.appendChild(bottomHalf);
+    document.getElementById('player2-picks').textContent = [...player2Picks].join(', ');
+
+    clearHighlights();
+    player1StagePicks.clear();
+    turn = 1;
+    document.getElementById('turn-indicator').textContent = "";
+  
+    // If Player 1 is also automated
+    if (autoPlayer1) {
+      setTimeout(autoPlayPlayer1, delayvar);
+    }
+  }
+  
+  function autoPlayPlayer1() {
+	if (isPaused) return;  
+    const totalBlocks = gridSize * gridSize;
+    const available = [];
+
+    for (let i = 1; i <= totalBlocks; i++) {
+      if (!player1Picks.has(i)) {
+        available.push(i);
+      }
+    }
+
+    if (available.length < player1PickCount) {
+      alert("Player 1 lost!");
+      turn = 0;
+      return;
+    }
+
+    // Pick 4 random unique numbers
+    const picks = [];
+    while (picks.length < player1PickCount) {
+      const choice = available[Math.floor(Math.random() * available.length)];
+      if (!picks.includes(choice)) picks.push(choice);
+    }
+
+    picks.forEach(num => {
+      const block = document.querySelector(`.number-block:nth-child(${num})`);
+      if (!player1Picks.has(num)) {
+        player1Picks.add(num);
+        player1StagePicks.add(num);
+        const topHalf = document.createElement('div');
+        topHalf.classList.add('player1-picked');
+        block.appendChild(topHalf);
+      }
+    });
+
+    document.getElementById('player1-picks').textContent = [...player1Picks].join(', ');
+
+    const validMoves = highlightValidPlayer2Moves();
+    if (validMoves.length === 0) {
+      alert("Player 2 lost!");
+      turn = 0;
+      return;
+    }
+
+	if (smartPlayer2) {
+	  setTimeout(autoPlaySmartPlayer2, delayvar);
+	} else if (autoPlayer2) {
+	  setTimeout(() => {
+	    const choice = validMoves[Math.floor(Math.random() * validMoves.length)];
+	    const autoBlock = document.querySelector(`.number-block:nth-child(${choice})`);
+	    player2Picks.add(choice);
+	    const bottomHalf = document.createElement('div');
+	    bottomHalf.classList.add('player2-picked');
+	    autoBlock.appendChild(bottomHalf);
+	    document.getElementById('player2-picks').textContent = [...player2Picks].join(', ');
+	    clearHighlights();
+	    player1StagePicks.clear();
+	    turn = 1;
+	    document.getElementById('turn-indicator').textContent = "";
+	    if (autoPlayer1) setTimeout(autoPlayPlayer1, delayvar);
+	  }, delayvar);
+	} else {
+	  turn = 2;
+	  document.getElementById('turn-indicator').textContent = "";
+	}
+
+  }
+
+  function highlightValidPlayer2Moves() {
+    const min = Math.min(...player1StagePicks);
+    const max = Math.max(...player1StagePicks);
+    const valid = [];
+
+    for (let i = min; i <= max; i++) {
+      if (i % 2 === 0 && !player2Picks.has(i)) {
+        const block = document.querySelector(`.number-block:nth-child(${i})`);
+        if (block && highlightEnabled) {
+          block.classList.add('highlight');
+        }
+        valid.push(i);
+      }
+    }
+    // If no valid moves found, show the popup only if Player 2 has no remaining evens in the range
+    if (valid.length === 0 && player2Picks.size === Math.floor((max - min + 1) / 2)) {
+      alert("Player 2 lost!");
+      turn = 0; // End the game
+    }
+
+    return valid;
+  }
+
+
+
+  
+  function clearHighlights() {
+    document.querySelectorAll('.number-block.highlight').forEach(block => {
+      block.classList.remove('highlight');
+    });
+  }
+
+
+  generateGrid();
+</script>
+</body>
+</html>

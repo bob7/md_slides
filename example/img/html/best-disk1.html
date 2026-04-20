@@ -1,0 +1,712 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Sun Game</title>
+
+<style>
+body, html, #body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+/*    background: #111111;*/
+    color: #e0e0e0;
+}
+
+.body {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+}
+
+#partitionSVG {
+    width: 100%;
+    flex-grow: 1;
+    font: 13px monospace;
+}
+
+.buttonm, .button0, .button1, .button7, .button8 {
+    color: #404040;
+    font-weight: 600;
+    outline: none;
+    margin-bottom: 10px;
+    height: 30px;
+    width: 60px;
+    font-size: 12px;
+    background-color: #999999;
+    border-radius: 10px;
+    border: 0px solid #f07cc0;
+}
+
+.buttonm, .button0 {
+    font-weight: 800;
+    height: 20px;
+    font-size: 16px;
+}
+
+.tooltip {
+    position: absolute;
+    background: #333;
+    color: #fff;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+text {
+    fill: #ffffff;
+    font-size: 10px;
+    font-family: monospace;
+/*    font-weight: bold;*/
+}
+
+#Proportion, #MaxLabelSetSize {
+    font-size: 14px;
+    color: #e0e0e0;
+}
+</style>
+</head>
+<body>
+
+<div class="body" id="body">
+    <div class="controls">
+        <button id="btm" class="buttonm" onclick="minus()">-</button>
+        <button id="bt0" class="button0" onclick="add()">+</button>
+        <button id="bt1" class="button1" onclick="newGame()">New</button>
+        <button id="bt7" class="button7" onclick="Random_Red()">Random</button>
+        <button id="bt8" class="button8" onclick="toggleAuto()">Auto</button>
+    <div id="Proportion">0%</div>
+        <div id="MaxLabelSetSize">0</div>
+    </div>    
+    <svg id="partitionSVG"></svg>
+</div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/d3@5.16.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-random@2.0.0/dist/d3-random.min.js"></script>
+
+<script>
+	let fontvar = "15";
+	let delayvar = 500;
+    let autoMode = false;
+    let autoInterval = null;
+    let FLAGPlayer = 0;
+    let cur_red_choice_num = 0;
+    let next = 'red';
+    let Recording = [];
+    let depth = 6;
+    let beginLabel;
+    let endLabel;
+    let treemap;
+    let Play_mode = "globalBaby";
+    let max_capacity = 0;
+    let redNowLabel = '';
+    let redNowLabel_id = '';
+    let blueClickCount = 1;
+    let blueSelectLabel = [];
+    let tmpLayer = 0;
+    let tmpCount = 0;
+    let DUMMY = false;
+    let maxLabelSetSize = 0;
+
+    const tree = {
+        label: '0',
+        id: '0',
+        labelSet: new Set(['0']),
+        children: [],
+        isLeaf: false,
+        dummy: new Set(),
+        preCor: "normal",
+        curCor: "normal"
+    };
+
+    let cache = { 0: [tree] };
+
+    var tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("z-index", "10")
+        .style("opacity", 0);
+
+    const colorMap = {
+        normal: '#555',
+        red_process: '#A1887F',
+        blue_end: '#9966FF',
+        blue_dark_end: '#663399',
+        red_end: '#222',
+        predictcolor: '#056E5F'
+    };
+
+    function fixedDiv() {
+        var d1 = document.getElementById("div1");
+        var d2 = document.getElementById("body");
+        if (d1 && d2) {
+            var h = window.document.body.clientHeight;
+            d1.style.height = h * 0.01 + 'px';
+            d2.style.height = h * 0.92 + 'px';
+        }
+    }
+
+    window.onload = function() {
+        start();
+    };
+
+    window.onresize = function() {
+        if (treemap) treemap.run(tree);
+    };
+
+    function toggleAuto() {
+        autoMode = !autoMode;
+        document.getElementById("bt8").innerHTML = autoMode ? "Stop Auto" : "Auto";
+        if (autoMode) {
+            autoPlay();
+        } else {
+            clearInterval(autoInterval);
+        }
+    }
+
+    function autoPlay() {
+        if (autoMode && next === 'red') {
+            Random_Red();
+        }
+        autoInterval = setTimeout(autoPlay, delayvar);
+    }
+
+    function add() {
+        depth++;
+        if (depth >= 11) depth = 11;
+        start();
+    }
+
+    function minus() {
+        depth--;
+        if (depth <= 4) depth = 4;
+        start();
+    }
+
+    function newGame() {
+        start();
+    }
+
+    function updateMaxLabelSetSize() {
+        maxLabelSetSize = 0;
+        function traverse(node) {
+            if (node.labelSet) {
+                let size = node.labelSet.size;
+                if (size > maxLabelSetSize) maxLabelSetSize = size;
+            }
+            if (node.children) {
+                node.children.forEach(traverse);
+            }
+        }
+        traverse(tree);
+        document.getElementById("MaxLabelSetSize").innerHTML = `${maxLabelSetSize}`;
+    }
+
+    function Random_Red() {
+        if (next !== 'red') return;
+        let attempts = 0;
+        let maxAttempts = endLabel - beginLabel + 1;
+        let request_node = null;
+        while (attempts < maxAttempts) {
+            let request = Random(beginLabel, endLabel);
+            request_node = findNodeByLabel(tree, request + "");
+            if (request_node && !request_node.red_end) break;
+            attempts++;
+        }
+        if (!request_node) {
+            console.error('No valid node found for Random_Red');
+            return;
+        }
+        redNowLabel = request_node.label;
+        redNowLabel_id = request_node.id;
+        Recording.push("r:id:" + redNowLabel_id);
+        FLAGPlayer = 1;
+        findNodeById(tree, redNowLabel_id, node => {
+            node.red_process = true;
+        });
+        cur_red_choice_num += 1;
+        fill_Proportion();
+        updateMaxLabelSetSize();
+        next = 'blue';
+        treemap.run(tree);
+        if (Play_mode === "globalBaby") {
+            onrclick_auto_global();
+        }
+    }
+
+    class Tree {
+        constructor(depth, lc, rc) {
+            refreshGlobalVariable();
+            set_Variable(depth);
+            construct_luoji(depth);
+            fill_Proportion();
+            updateMaxLabelSetSize();
+            this.lc = lc.bind(this);
+            this.rc = rc.bind(this);
+        }
+
+        run(tree) {
+            const width = window.innerWidth;
+            const height = window.innerHeight - 10;
+            const radius = Math.min(width, height) / 2 / depth;
+
+            const arc = d3.arc()
+                .startAngle(d => d.x0)
+                .endAngle(d => d.x1)
+                .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.005))
+                .innerRadius(d => d.y0 * radius)
+                .outerRadius(d => Math.max(d.y0 * radius, d.y1 * radius - 1))
+                .padRadius(radius * 1.5);
+
+            const partition = data => {
+                const root = d3.hierarchy(data)
+                    .sum(d => d.size)
+                    .sort((a, b) => b.value - a.value);
+                return d3.partition()
+                    .size([2 * Math.PI, root.height + 1])
+                    (root);
+            };
+
+            const root = partition(tree);
+            root.each(d => d.current = d);
+
+            d3.select('#partitionSVG').selectAll('*').remove();
+            const svg = d3.select('#partitionSVG')
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("font", "10px monospace");
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${width / 2},${height / 2})`);
+
+            g.append("g")
+                .selectAll("path")
+                .data(root.descendants().slice(1))
+                .join("path")
+                .attr("fill", getColor)
+                .attr("d", d => arc(d.current))
+                .on('click', d => {
+                    if (FLAGPlayer === 0) {
+                        if (d.data.isLeaf) this.lc(d);
+                    } else {
+                        if (d.data.isLeaf) this.rc(d);
+                        d3.event.preventDefault();
+                    }
+                })
+                .on("mouseover", function(d) {
+                    d3.selectAll("path")
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 1);
+                    const sequenceArray = d.ancestors().reverse();
+                    sequenceArray.shift();
+                    svg.selectAll("path")
+                        .filter(node => sequenceArray.indexOf(node) >= 0)
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 0.8);
+                    tooltip.html([...d.data.labelSet].join("/"))
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 1);
+                })
+                .on("mousemove", function() {
+                    tooltip
+                        .style("top", (d3.event.pageY + 10) + "px")
+                        .style("left", (d3.event.pageX + 10) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.selectAll("path")
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 1);
+                    tooltip
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 0);
+                });
+
+            g.append("g")
+                .attr("pointer-events", "none")
+                .attr("text-anchor", "middle")
+                .style("user-select", "none")
+                .selectAll("text")
+                .data(root.descendants().slice(1))
+                .join("text")
+                .attr("dy", "0.35em")
+                .attr("transform", d => labelTransform(d.current, radius))
+                .text(d => [...d.data.labelSet].join("/") || "")
+                .style("fill", "#ffffff")
+                .style("font-size", d => d.data.isLeaf ? "10px" : fontvar)
+                .style("opacity", d => d.data.labelSet.size > 0 ? 1 : 0);
+
+            function labelTransform(d, radius) {
+                const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
+                const y = (d.y0 + d.y1) / 2 * radius;
+                const scale = d.data.isLeaf ? 1 : 0.8;
+                return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180}) scale(${scale})`;
+            }
+        }
+    }
+
+    function getColor(d) {
+        if (d.data.isDummy && !d.data.blue && !d.data.predictcolor) return d.data.dummy_color || colorMap.normal;
+        if (d.data.red_process) return colorMap.red_process;
+        if (d.data.red_end) return colorMap.red_end;
+        if (d.data.blue_end) return colorMap.blue_end;
+        if (d.data.predictcolor) return colorMap.predictcolor;
+        return colorMap.normal;
+    }
+
+    function set_Variable(depth) {
+        beginLabel = Math.pow(2, depth - 1) - 1;
+        endLabel = Math.pow(2, depth) - 2;
+    }
+
+    function refreshGlobalVariable() {
+        cache = { 0: [tree] };
+        Recording = [];
+    }
+
+    function Random(min, max) {
+        return Math.round(Math.random() * (max - min)) + min;
+    }
+
+    function start() {
+        max_capacity = 0;
+        Play_mode = "globalBaby";
+        FLAGPlayer = 0;
+        next = 'red';
+        cur_red_choice_num = 0;
+        blueSelectLabel = [];
+        redNowLabel = '';
+        redNowLabel_id = '';
+        maxLabelSetSize = 0;
+        fill_Proportion();
+        treemap = new Tree(depth, onlclick, onrclick);
+        treemap.run(tree);
+        if (autoMode) {
+            clearInterval(autoInterval);
+            autoPlay();
+        }
+    }
+
+    function construct_luoji(depth) {
+        let id = 0;
+        cache = { 0: [tree] };
+        tree.label = '0';
+        tree.id = '0';
+        tree.labelSet = new Set(['0']);
+        tree.children = [];
+        tree.isLeaf = false;
+
+        for (let i = 0; i < depth - 1; i++) {
+            cache[i + 1] = [];
+            for (let j = 0; j < cache[i].length; j++) {
+                let parent = cache[i][j];
+                let parentLabel = parseInt(parent.label);
+                let c1 = {
+                    label: (2 * parentLabel + 1) + '',
+                    id: (++id) + "",
+                    labelSet: new Set([(2 * parentLabel + 1) + '']),
+                    children: [],
+                    isLeaf: i === depth - 2,
+                    p: parent,
+                    dummy: new Set(),
+                    isDummy: false,
+                    normal: true,
+                    red_end: false,
+                    red_process: false,
+                    blue: false,
+                    predictcolor: false,
+                    value: Math.pow(2, depth - 1),
+                    preCor: "normal",
+                    curCor: "normal"
+                };
+                let c2 = {
+                    label: (2 * parentLabel + 2) + '',
+                    id: (++id) + "",
+                    labelSet: new Set([(2 * parentLabel + 2) + '']),
+                    children: [],
+                    isLeaf: i === depth - 2,
+                    p: parent,
+                    dummy: new Set(),
+                    isDummy: false,
+                    normal: true,
+                    red_end: false,
+                    red_process: false,
+                    blue: false,
+                    predictcolor: false,
+                    value: Math.pow(2, depth - 1),
+                    preCor: "normal",
+                    curCor: "normal"
+                };
+                if (i === depth - 2) {
+                    c1.size = 1;
+                    c2.size = 1;
+                }
+                parent.children = [c1, c2];
+                cache[i + 1].push(c1, c2);
+            }
+        }
+    }
+
+    async function onlclick(d) {
+        if (next !== 'red' || d.data.red_end) return;
+        redNowLabel = d.data.label;
+        redNowLabel_id = d.data.id;
+        Recording.push("r:id:" + redNowLabel_id);
+        FLAGPlayer = 1;
+        findNodeById(tree, redNowLabel_id, node => {
+            node.red_process = true;
+        });
+        cur_red_choice_num += 1;
+        fill_Proportion();
+        updateMaxLabelSetSize();
+        next = 'blue';
+        this.run(tree);
+        if (Play_mode === "globalBaby") {
+            onrclick_auto_global();
+        }
+    }
+
+    async function onrclick(d) {
+        if (next !== 'blue' || d.data.red_process || d.data.red_end) return;
+        let tmp_redNowLabels = [...findNodeById(tree, d.data.id).labelSet];
+        let length = tmp_redNowLabels.length;
+        if (length > 1) {
+            if (blueSelectLabel.length < length - 1) {
+                tmpLayer = 0;
+                if (ponrclick_autocheck(d.data.id, parseInt(tmp_redNowLabels[blueSelectLabel.length]))) {
+                    single.handle(d.data.id, tmp_redNowLabels[blueSelectLabel.length]);
+                    findNodeById(tree, d.data.id, node => {
+                        Recording.push("b:id:" + d.data.id + ":" + tmpLayer);
+                    });
+                    blueSelectLabel.push(1);
+                }
+            } else {
+                tmpLayer = 0;
+                if (ponrclick_autocheck(d.data.id, parseInt(tmp_redNowLabels[blueSelectLabel.length]))) {
+                    single.handle(d.data.id, tmp_redNowLabels[length - 1]);
+                    findNodeById(tree, redNowLabel_id, node => {
+                        node.red_end = true;
+                        node.red_process = false;
+                    });
+                    findNodeById(tree, d.data.id, node => {
+                        Recording.push("b:id:" + d.data.id + ":" + tmpLayer);
+                    });
+                    blueSelectLabel = [];
+                    next = 'red';
+                    redNowLabel = "";
+                    FLAGPlayer = 0;
+                }
+            }
+        } else {
+            tmpLayer = 0;
+            if (ponrclick_autocheck(d.data.id, parseInt(tmp_redNowLabels[0]))) {
+                single.handle(d.data.id, tmp_redNowLabels[0]);
+                findNodeById(tree, redNowLabel_id, node => {
+                    node.red_end = true;
+                    node.red_process = false;
+                });
+                findNodeById(tree, d.data.id, node => {
+                    Recording.push("b:id:" + d.data.id + ":" + tmpLayer);
+                });
+                next = 'red';
+                redNowLabel = "";
+                FLAGPlayer = 0;
+            }
+        }
+        updateMaxLabelSetSize();
+        treemap.run(tree);
+    }
+
+    function getAncestors(node) {
+        let ancestors = [];
+        let current = node;
+        while (current) {
+            ancestors.push(current);
+            current = current.p;
+        }
+        return ancestors;
+    }
+
+    function getPivot(j, i) {
+        let iNode = findNodeByLabel(tree, i + "");
+        let jNode = findNodeByLabel(tree, j + "");
+        if (!iNode || !jNode) return null;
+        let iAncestors = getAncestors(iNode);
+        let jAncestors = getAncestors(jNode).map(n => n.label);
+        let pivotNode = null;
+        let maxLabel = -1;
+        for (let d of iAncestors) {
+            for (let label of d.labelSet) {
+                if (jAncestors.includes(label) && parseInt(d.label) > maxLabel) {
+                    maxLabel = parseInt(d.label);
+                    pivotNode = d;
+                }
+            }
+        }
+        return pivotNode;
+    }
+
+    function getP(j, i) {
+        let pivotNode = getPivot(j, i);
+        return pivotNode ? pivotNode.labelSet.size : 0;
+    }
+
+    function getQ(j, i) {
+        let pivotNode = getPivot(j, i);
+        let iNode = findNodeByLabel(tree, i + "");
+        if (!pivotNode || !iNode) return 0;
+        let path = [];
+        let current = iNode;
+        while (current && current !== pivotNode) {
+            path.push(current);
+            current = current.p;
+        }
+        if (!path.length) path.push(iNode);
+        return Math.max(...path.map(n => n.labelSet.size));
+    }
+	//here do the change; fix; its me; george
+	//fix: if the scores are equal, we take the one with the largest L(pivot) (so, second ranking is according to the number of affected cells)
+    function getD(j) {
+        let minQ = Infinity;
+        let candidates = [];
+        for (let i = beginLabel; i <= endLabel; i++) {
+            let node = findNodeByLabel(tree, i + "");
+            if (!node || node.red_process || node.red_end) continue;
+            let q = getQ(j, i);
+            if (q < minQ) {
+                minQ = q;
+                candidates = [node];
+            } else if (q === minQ) {
+                candidates.push(node);
+            }
+        }
+        return candidates;
+    }
+
+    async function onrclick_auto_global() {
+        if (next !== 'blue') return;
+        let iNode = findNodeById(tree, redNowLabel_id);
+        if (!iNode) {
+            console.error(`Node with id ${redNowLabel_id} not found`);
+            return;
+        }
+        let tmp_redNowLabels = [...iNode.labelSet];
+        for (let j of tmp_redNowLabels) {
+            let Uj = getD(j);
+            if (!Uj.length) {
+                alert("The coder loses");
+                return;
+            }
+            let minPivotLabel = Infinity;
+            let targetNode = null;
+            for (let u of Uj) {
+                let pivotNode = getPivot(j, u.label);
+                if (pivotNode && parseInt(pivotNode.label) < minPivotLabel) {
+                    minPivotLabel = parseInt(pivotNode.label);
+                    targetNode = u;
+                }
+            }
+            if (!targetNode) {
+                console.error(`No valid target node for j=${j}`);
+                continue;
+            }
+            single.handle(targetNode.id, j);
+            Recording.push("b:id:" + targetNode.id + ":" + tmpLayer);
+        }
+        findNodeById(tree, redNowLabel_id, node => {
+            node.red_end = true;
+            node.red_process = false;
+        });
+        blueSelectLabel = [];
+        next = 'red';
+        redNowLabel = "";
+        FLAGPlayer = 0;
+        tmpLayer = 0;
+        updateMaxLabelSetSize();
+        treemap.run(tree);
+    }
+
+    function ponrclick_autocheck(id, source) {
+        if (max_capacity === 0) return true;
+        let node = findNodeById(tree, id + "");
+        if (!node) {
+            console.warn(`Node with id ${id} not found in ponrclick_autocheck`);
+            return false;
+        }
+        if (max_capacity === 1) {
+            if (node.labelSet.size > 0) return false;
+        } else {
+            if (node.labelSet.size >= max_capacity) return false;
+        }
+        let layer = depth - 1;
+        let currentSource = source;
+        while (layer > 0) {
+            if ((max_capacity === 1 && node.labelSet.size > 0 || node.labelSet.size >= max_capacity) && !node.labelSet.has(currentSource + "")) {
+                return false;
+            }
+            node = node.p;
+            if (!node) break;
+            currentSource = Math.floor((currentSource - 1) / 2);
+            layer -= 1;
+        }
+        return true;
+    }
+
+    function fill_Proportion() {
+        let Proportion = cur_red_choice_num / (endLabel - beginLabel + 1) * 100;
+        document.getElementById("Proportion").innerHTML = Proportion.toFixed(2) + "%";
+    }
+
+    function findNodeById(node, id, handle = () => {}) {
+        if (node.id === id) {
+            handle(node);
+            return node;
+        }
+        if (node.children.length) {
+            return findNodeById(node.children[0], id, handle) || findNodeById(node.children[1], id, handle);
+        }
+        return null;
+    }
+
+    function findNodeByLabel(node, label) {
+        if (node.label === label) return node;
+        if (node.children.length) {
+            return findNodeByLabel(node.children[0], label) || findNodeByLabel(node.children[1], label);
+        }
+        return null;
+    }
+
+    const single = {
+        handle(bluelabel_id, redlabel) {
+            let blueNode = findNodeById(tree, bluelabel_id);
+            if (!blueNode) {
+                console.error(`Blue node with id ${bluelabel_id} not found`);
+                return;
+            }
+            let redNode = parseInt(redlabel);
+            while (blueNode && !blueNode.labelSet.has(redNode + "")) {
+                tmpLayer++;
+                blueNode.labelSet.add(redNode + "");
+                blueNode = blueNode.p;
+                redNode = Math.floor((redNode - 1) / 2);
+            }
+        }
+    };
+
+    start();
+</script>
+</body>
+</html>
