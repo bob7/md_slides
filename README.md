@@ -20,7 +20,7 @@ python make.py file.md -o out.html
   --js file   # extra JS
 ```
 
-## Slide Types
+## Slide Types (you can also add your own)
 Start slide with keyword + `\n---\n`
 
 - `center`: Centered dark slide  
@@ -59,7 +59,7 @@ Start slide with keyword + `\n---\n`
 
 ## Environment Blocks
 
-### Theorems & Definitions
+### Theorems & Definitions (you can also add your own)
 - `<thm>`: Theorem block  
   ```markdown
   <thm>
@@ -91,7 +91,7 @@ Start slide with keyword + `\n---\n`
   </box>
   ```
 
-## Inline Tags
+## Inline Tags (you can also add your own)
 
 ### Color/Style
 - `<r>`: red text  
@@ -113,7 +113,8 @@ Start slide with keyword + `\n---\n`
 - `<b>`, `<strong>`: green bold  
   Ex: `<b>bold</b>` → <b style="color:#718c00">bold</b>
 
-## KaTeX Macros
+## Bult-in KaTeX Macros (you can also add your own)
+
 | Macro | Renders |
 |-------|---------|
 | `\RR` | \mathbb{R} |
