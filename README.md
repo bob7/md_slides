@@ -20,41 +20,40 @@ python make.py file.md -o out.html
   --js file   # extra JS
 ```
 
-## Slide Types (you can also add your own)
-Start slide with keyword + `\n---\n`
+## Slide Types
+Start slide with keyword + `---`
 
 - `center`: Centered dark slide  
   ```markdown
   center
-  # Main Title
-  Large centered text
   ---
+  ## New section
+  Large centered text
   ```
 - `thanks`: Thanks slide  
   ```markdown
   thanks
-  # Thank You!
-  - Q&A
   ---
+  ## Thank You!
+  - Q&A
   ```
 - `iframe`: Include HTML (dark flex)  
   ```markdown
   iframe
-  <iframe src="demo.html"></iframe>
   ---
+  <iframe src="demo.html"></iframe>
   ```
 - `frozen`: No page number  
   ```markdown
   frozen
-  Hidden slide content
   ---
   ```
 - `references`: References list  
   ```markdown
   references
-  # References
-  - [1] Author, Title
   ---
+  ## References
+  - [1] Author, Title
   ```
 
 ## Environment Blocks
@@ -141,4 +140,3 @@ Start slide with keyword + `\n---\n`
 | `\tuple{...}` | \langle {...} \rangle |
 | `\dbra{...}` | \llbracket {...} \rrbracket |
 | `\sqbrad{...}{...}` | \{ {...} : {...} \} |
-
